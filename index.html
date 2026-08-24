@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a Virtual Cell — Seven Principles from cfRNA/cfDNA Foundation Models</title>
+<style>
+  :root{
+    --ink:#0f1512;
+    --panel:#161f1a;
+    --panel-line:#26332c;
+    --paper:#eee8da;
+    --paper-dim:#b9b2a1;
+    --teal:#5fb8a8;
+    --teal-dim:#3a7268;
+    --rust:#c17a5c;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Source Serif Pro", Georgia, "Times New Roman", serif;
+    --sans: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--ink); color:var(--paper); font-family:var(--sans); line-height:1.6; padding:0 0 6rem;}
+  .wrap{max-width:980px; margin:0 auto; padding:0 2rem;}
+
+  header{padding:5rem 0 3.2rem; border-bottom:1px solid var(--panel-line);}
+  .eyebrow{
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--teal); margin-bottom:1.4rem; display:flex; align-items:center; gap:0.7rem;
+  }
+  .eyebrow::before{content:""; width:22px; height:1px; background:var(--teal); display:inline-block;}
+  h1{
+    font-family:var(--serif); font-weight:600; font-size:clamp(2rem, 4.2vw, 3.1rem);
+    letter-spacing:-0.01em; max-width:20ch; color:var(--paper);
+  }
+  h1 em{font-style:normal; color:var(--teal);}
+  .subhead{margin-top:1.3rem; max-width:64ch; color:var(--paper-dim); font-size:1.02rem;}
+  .task-def{
+    margin-top:2.2rem; padding:1.3rem 1.6rem; border:1px solid var(--teal-dim);
+    background:rgba(95,184,168,0.06); border-radius:3px; max-width:70ch;
+  }
+  .task-def .label{font-family:var(--mono); font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--teal); margin-bottom:0.5rem;}
+  .task-def p{font-size:0.95rem; color:#d9d2c2;}
+
+  section.principles{padding-top:3.5rem;}
+  .section-label{font-family:var(--mono); font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--paper-dim); margin-bottom:2rem;}
+
+  .principle{border:1px solid var(--panel-line); background:var(--panel); border-radius:3px; margin-bottom:1.4rem; overflow:hidden;}
+  .principle-head{padding:1.4rem 1.7rem 1.1rem; border-bottom:1px solid var(--panel-line); background:linear-gradient(180deg, rgba(95,184,168,0.05), transparent);}
+  .principle-num{font-family:var(--mono); font-size:0.85rem; color:var(--teal-dim); display:block; margin-bottom:0.4rem;}
+  .principle-title{font-family:var(--serif); font-size:1.3rem; color:var(--paper);}
+  .principle-src{display:block; font-family:var(--mono); font-size:0.7rem; color:var(--paper-dim); margin-top:0.5rem;}
+
+  .principle-body{padding:1.5rem 1.7rem;}
+  .principle-body p{font-size:0.96rem; color:#d9d2c2; margin-bottom:1rem;}
+  .principle-body p:last-child{margin-bottom:0;}
+
+  .worked{
+    margin-top:1.2rem; padding:1.1rem 1.4rem; background:rgba(0,0,0,0.2);
+    border-left:2px solid var(--rust); border-radius:0 3px 3px 0;
+  }
+  .worked .wlabel{font-family:var(--mono); font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--rust); margin-bottom:0.5rem;}
+  .worked p{font-size:0.92rem; color:var(--paper-dim); margin:0;}
+
+  code{font-family:var(--mono); font-size:0.88em; color:var(--paper); background:rgba(255,255,255,0.06); padding:0.05em 0.35em; border-radius:2px;}
+
+  .diagram-section{padding-top:4.5rem;}
+  .diagram-frame{border:1px solid var(--panel-line); background:var(--panel); border-radius:3px; padding:2rem 1.5rem 1.2rem;}
+  .diagram-caption{font-family:var(--mono); font-size:0.76rem; color:var(--paper-dim); margin-top:1.1rem; padding-top:1.1rem; border-top:1px solid var(--panel-line); max-width:74ch;}
+  .diagram-caption span{color:var(--teal);}
+
+  .flow{
+    display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;
+    font-family:var(--mono); font-size:0.78rem; color:var(--paper-dim);
+    margin-top:3rem; padding:1.2rem 1.5rem; border:1px dashed var(--panel-line); border-radius:3px;
+  }
+  .flow .step{color:var(--paper);}
+  .flow .arrow{color:var(--teal-dim);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Arc Institute / UCSF · Legends of Science Oncology Symposium · Aug 14, 2026</div>
+    <h1>Building a <em>virtual cell</em>: seven principles from cfRNA/cfDNA foundation models</h1>
+    <p class="subhead">Exai-1 and LEAF-1 were built to detect cancer signal in circulating nucleic acids. The architecture choices underneath them — how they compress, condition, tokenize, and generalize — map directly onto what a virtual cell model needs to do.</p>
+    <div class="task-def">
+      <div class="label">What a virtual cell model actually does</div>
+      <p>Given a cell's baseline expression state and a perturbation (drug, knockout, cytokine), predict what the cell's expression profile becomes after that perturbation. Everything below is about how to build the machine that does this prediction well.</p>
+    </div>
+  </header>
+
+  <section class="principles">
+    <div class="section-label">Seven principles, operationalized</div>
+
+    <!-- 1 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">01 / 07</span>
+        <div class="principle-title">Compress the cell into a latent, don't operate on raw counts</div>
+        <span class="principle-src">Orion / Exai-1 — q(z|x) compresses ~7,349 features into z, dim 32</span>
+      </div>
+      <div class="principle-body">
+        <p>A real cell profile is ~20,000 gene measurements — noisy, sparse, mostly zeros. You can't perturb or compare cells directly in that space; it's too high-dimensional and too noisy. Train an encoder that compresses each cell's expression vector into a small vector <code>z</code> that captures "what kind of cell state this is." This <code>z</code> is the thing the model actually operates on.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>Two biologically similar cells — same type, similar activation state — end up with similar z vectors even if their raw gene counts differ due to measurement noise. Distance in z-space becomes a meaningful measure of "how different are these cell states," which raw counts don't give you.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">02 / 07</span>
+        <div class="principle-title">Separate technical noise from biology with a dual encoder</div>
+        <span class="principle-src">Orion — separate Library Encoder q(ℓ|r), decoded abundance μ = ρ × ℓ</span>
+      </div>
+      <div class="principle-body">
+        <p>Batch, sequencing depth, and prep platform get their own encoder so they don't contaminate the biological latent. This is architectural batch correction, built in from the start rather than regressed out afterward.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>Training data from five labs' single-cell experiments: the same cell type looks different in raw counts purely from sequencing depth or reagent batch — not biology. Without separating this out, the model wrongly learns that lab identity is part of cell state, and "T cell, resting" from Lab A ends up in a different part of latent space than the same state from Lab B.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">03 / 07</span>
+        <div class="principle-title">Condition on the perturbation, in-context, not as a bolt-on</div>
+        <span class="principle-src">Exai-1 — special tokens CD / TOO / AV / BT prepended to the input sequence</span>
+      </div>
+      <div class="principle-body">
+        <p>Feed a token identifying the perturbation being applied — which drug, which dose — alongside the cell's baseline expression, into the same transformer that processes expression. The model learns how different perturbation tokens shift the latent differently, jointly with learning cell state, rather than in a separate downstream step.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>Instead of training 500 separate models for 500 drug perturbations, one model conditions on a perturbation token. At inference, you can query perturbation #501 — never seen in training — and get a reasonable answer, because the model learned a general perturbation-response function, not 500 lookup tables.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">04 / 07</span>
+        <div class="principle-title">Treat genes as an unordered set, not a positional sequence</div>
+        <span class="principle-src">LEAF-1 — fragment pool is position-independent, embed by biology not coordinate</span>
+      </div>
+      <div class="principle-body">
+        <p>Genes don't have a natural order the way words in a sentence do. Feeding "gene 1, gene 2, gene 3..." in arbitrary column order wastes model capacity learning that order means something when it doesn't.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>Geneformer-style tokenization ranks genes by expression level and treats the cell as an unordered set of active genes. The model attends to <em>which</em> genes are active and how much, not their position in the input vector — the same fix LEAF-1 applies to cfDNA fragments by ignoring genomic position and embedding by content instead.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">05 / 07</span>
+        <div class="principle-title">Pretrain on cheap unlabeled data before fine-tuning on expensive labels</div>
+        <span class="principle-src">Exai-1 — denoises masked cfRNA at R² = 0.89 vs. 0.57 for a strong baseline</span>
+      </div>
+      <div class="principle-body">
+        <p>Before the model sees a single labeled perturbation experiment, pretrain it on a large pile of unperturbed cell profiles: randomly hide some genes, ask it to predict their values from the rest. This teaches normal gene co-expression patterns for free, using the far larger pool of unlabeled data.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>Only after this masked-reconstruction pretraining does the model get fine-tuned on the smaller, expensive set of labeled perturbation experiments. The R² gap over a naive baseline (0.89 vs. 0.57) is the empirical case for why this stage matters — a learned latent substantially outperforms non-learned imputation before any labeled fine-tuning even happens.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">06 / 07</span>
+        <div class="principle-title">Use the latent to synthetically extend small experiments</div>
+        <span class="principle-src">Exai-1 — synthetic profiles lift AUC by ~0.10, most in small cohorts (Ovarian, n=48)</span>
+      </div>
+      <div class="principle-body">
+        <p>Because a well-trained latent space is smooth, you can sample new points near real ones and decode them into synthetic examples — effectively multiplying a small dataset without new wet-lab data.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>A rare cell type with only 40 perturbation experiments ever run isn't enough to train on directly. Sampling synthetic "cells like this" from the pretrained latent pads out the effective dataset — the same mechanism that lifted the ovarian cancer classifier (n=48) in Exai-1's actual results.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="principle">
+      <div class="principle-head">
+        <span class="principle-num">07 / 07</span>
+        <div class="principle-title">Benchmark on what the model never saw, not what it basically already knows</div>
+        <span class="principle-src">Exai-1 — few-shot to ovarian & head/neck cancers, zero-shot to osteosarcoma</span>
+      </div>
+      <div class="principle-body">
+        <p>The real test isn't reconstructing a held-out cell that's basically the same type as ones already seen — it's predicting the response to a perturbation, or in a cell type, with zero examples in training.</p>
+        <div class="worked">
+          <div class="wlabel">Concretely</div>
+          <p>That's what justifies calling it a general-purpose model rather than an interpolation table. For a virtual cell model, the equivalent test is holding out an entire cell type or perturbation class entirely, then checking whether predicted responses are still directionally sound.</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="diagram-section">
+    <div class="section-label">How it composes</div>
+    <div class="flow">
+      <span class="step">raw expression (~20k genes)</span>
+      <span class="arrow">→</span>
+      <span class="step">gene-set tokenization <em>(04)</em></span>
+      <span class="arrow">→</span>
+      <span class="step">dual encoder: biology + batch <em>(02)</em></span>
+      <span class="arrow">→</span>
+      <span class="step">latent z <em>(01)</em></span>
+      <span class="arrow">→</span>
+      <span class="step">conditioned on perturbation token <em>(03)</em></span>
+      <span class="arrow">→</span>
+      <span class="step">predicted post-perturbation state</span>
+    </div>
+    <div class="diagram-frame" style="margin-top:1.4rem;">
+      <div class="diagram-caption">Training order matters as much as the architecture: pretrain the encoder/decoder on unperturbed profiles with masked reconstruction <span>(05)</span> first — this is where most of the representational quality comes from. Only then fine-tune on labeled perturbation data, using latent-space sampling <span>(06)</span> to extend any cell type or perturbation with too few real examples. Evaluate by holding out an entire perturbation class or cell type, not just held-out cells of a type already seen <span>(07)</span>.</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
